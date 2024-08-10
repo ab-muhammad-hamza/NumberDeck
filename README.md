@@ -11,7 +11,7 @@
 [![Stars](https://img.shields.io/github/stars/ab-muhammad-hamza/numberdeck.svg)](https://github.com/ab-muhammad-hamza/NumberDeck/stargazers)
 [![Issues](https://img.shields.io/github/issues/ab-muhammad-hamza/numberdeck.svg)](https://github.com/ab-muhammad-hamza/NumberDeck/issues)
 
-[Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/BETA/NumberDeck.zip) | [Report Bug](https://github.com/ab-muhammad-hamza/NumberDeck/issues) | [Request Feature](https://github.com/ab-muhammad-hamza/NumberDeck/issues)
+[Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/Release/NumberDeck.exe) | [Report Bug](https://github.com/ab-muhammad-hamza/NumberDeck/issues) | [Request Feature](https://github.com/ab-muhammad-hamza/NumberDeck/issues) | [Website](https://hamza.sbs/numberdeck)
 
 </div>
 
@@ -36,9 +36,10 @@ NumberDeck is an open-source project that replaces the physical Stream Deck with
 
 ## 🛠️ Installation
 
-1. [Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/BETA/NumberDeck.zip) the latest release
-2. Extract the ZIP file to your preferred location
-3. Run `numberdeck.exe` to start the application
+1. [Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/Release/NumberDeck.exe) the latest release
+2. Run the installer and press extract
+3. You'll find a shortcut on your Desktop
+4. Open and Enjoy
 
 ## 🔧 Usage
 
