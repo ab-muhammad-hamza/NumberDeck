@@ -34,9 +34,15 @@ NumberDeck is an open-source project that replaces the physical Stream Deck with
 - 🌓 **Dark/Light Mode**: Work comfortably in any lighting condition
 - 🎨 **Customizable UI**: Personalize your NumberDeck experience
 
+
+## 🆕 New Features (v1.01)
+
+- 🌟 **Title Glow**: Title glows yellow if NumberDeck is listening but numlock is good, glows green if listening and numlock is on
+- 🅿 **Port Field**: Added port field to avoid confusion for OBS connection
+
 ## 🛠️ Installation
 
-1. [Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/BETA/NumberDeck.zip) the latest release
+1. [Download](https://github.com/ab-muhammad-hamza/NumberDeck/releases/download/v1.01/NumberDeck.exe) the latest release
 2. Extract the ZIP file to your preferred location
 3. Run `numberdeck.exe` to start the application
 
@@ -86,7 +92,8 @@ PS: You can bind the same NumKey to mute and unmute any source at the same time.
 - Now open NumberDeck, and click on the gear icon which is at the top.
 - Paste the details in the OBS section
   - OBS Address = Server IP
-    - In the IP address add a colon and copy the port from OBS and paste it. (if the IP is x.x.x.x, and the port is 123, then the address needed to be x.x.x.x:123) [The next update will have a separate field for this :)
+    - ~~In the IP address add a colon and copy the port from OBS and paste it. (if the IP is x.x.x.x, and the port is 123, then the address needed to be x.x.x.x:123) [The next update will have a separate field for this :)~~
+  - Port = Port from OBS
   - OBS Password = Server Password
 - Click save after entering them
 - Now you'll see a camera icon at the top of the app in red color. Click on it to connect to OBS
@@ -169,3 +176,22 @@ Contributions are what make the open-source community such an amazing place to l
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+## ChangeLog
+
+```
+v1.01 (28/09/2024)
+
+- Added Glow indications in the title. Glows yellow if NumberDeck is listening but numlock is good, glows green if listening and numlock is on
+- Added port field to avoid confusion for OBS connection
+- Fixed fields not filling up properly while typing in settings
+
+```
+
+
+```
+v1.0 (10/08/2024)
+
+- Initial Release
+
+```

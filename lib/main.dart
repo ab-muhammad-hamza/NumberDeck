@@ -44,6 +44,7 @@ class _MyAppState extends State<MyApp> {
   bool listenIsOn = false;
   Timer? debounceTimer;
   bool isObsConnected = false;
+  bool isNumLockOn = false;
 
   // OBS related
   ObsWebSocket? obsWebSocket;
@@ -66,6 +67,9 @@ class _MyAppState extends State<MyApp> {
   // Window titles
   static final List<String> windowTitles = [];
 
+  late TextEditingController _obsAddressController;
+  late TextEditingController _obsPasswordController;
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +78,49 @@ class _MyAppState extends State<MyApp> {
     loadSettings();
     loadKeyBindings();
     _initializeWindow();
+
+    // Initialize the controllers
+    final parts = obsAddress.split(':');
+    _obsAddressController = TextEditingController(text: parts.isNotEmpty ? parts[0] : '');
+    _obsPasswordController = TextEditingController(text: obsPassword);
+    _checkNumLockStatus();
   }
+
+  void _checkNumLockStatus() {
+    // Check Num Lock status every second
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        isNumLockOn = GetKeyState(VK_NUMLOCK) & 1 == 1;
+      });
+    });
+  }
+
+  Widget _buildGlowingTitle() {
+    Color glowColor = Colors.transparent;
+    if (listenIsOn && isNumLockOn) {
+      glowColor = Colors.green;
+    } else if (listenIsOn) {
+      glowColor = Colors.yellow;
+    }
+
+    return Container(
+      child: Text(
+        'NumberDeck',
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            for (double i = 1; i < 5; i++)
+              Shadow(
+                color: glowColor.withOpacity(0.3),
+                blurRadius: 3 * i,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Future<void> _initializeWindow() async {
     await windowManager.ensureInitialized();
@@ -113,6 +159,10 @@ class _MyAppState extends State<MyApp> {
       isCompactMode = prefs.getBool('is_compact_mode') ?? true;
       obsAddress = prefs.getString('obs_address') ?? '';
       obsPassword = prefs.getString('obs_password') ?? '';
+
+      // Update the controllers
+      _obsAddressController.text = obsAddress;
+      _obsPasswordController.text = obsPassword;
     });
     await connectToObs();
   }
@@ -125,6 +175,10 @@ class _MyAppState extends State<MyApp> {
     await prefs.setBool('is_compact_mode', isCompactMode);
     await prefs.setString('obs_address', obsAddress);
     await prefs.setString('obs_password', obsPassword);
+
+    // Update the controllers
+    _obsAddressController.text = obsAddress;
+    _obsPasswordController.text = obsPassword;
   }
 
   // Reset all settings and key bindings
@@ -147,6 +201,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     try {
+      // The obsAddress should already be in the format "ip:port"
       obsWebSocket = await ObsWebSocket.connect(
         obsAddress,
         password: obsPassword,
@@ -253,10 +308,18 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  // Update executeShortcut method
   void executeShortcut(String shortcut) {
     print("Executing shortcut: $shortcut");
     List<String> keys = shortcut.split(' + ');
-    List<int> vkCodes = keys.map((key) => getVirtualKeyCode(key)).where((vk) => vk != 0).toList();
+    List<int> vkCodes = [];
+    bool hasWinKey = keys.remove('Win');
+    
+    vkCodes.addAll(keys.map((key) => getVirtualKeyCode(key)).where((vk) => vk != 0));
+    
+    if (hasWinKey) {
+      vkCodes.insert(0, VK_LWIN);
+    }
     
     print("Virtual key codes: $vkCodes");
 
@@ -285,7 +348,7 @@ class _MyAppState extends State<MyApp> {
 
     calloc.free(pInputs);
   }
-
+  
   bool isModifierKey(int vkCode) {
     return vkCode == VIRTUAL_KEY.VK_CONTROL || vkCode == VIRTUAL_KEY.VK_SHIFT || vkCode == VIRTUAL_KEY.VK_MENU || vkCode == VIRTUAL_KEY.VK_LWIN;
   }
@@ -479,7 +542,7 @@ class _MyAppState extends State<MyApp> {
     keyboardEvent.startListening(onKeyEvent);
   }
 
-  // Stop listening for key events
+  // Stop listening for key event
   void stopListening() {
     setState(() {
       listenIsOn = false;
@@ -629,6 +692,7 @@ class _MyAppState extends State<MyApp> {
   Future<String> captureShortcut(BuildContext context) async {
     Set<LogicalKeyboardKey> pressedKeys = {};
     String shortcut = '';
+    bool isWindowsKeyPressed = false;
 
     return await showDialog<String>(
       context: context,
@@ -637,20 +701,29 @@ class _MyAppState extends State<MyApp> {
           focusNode: FocusNode()..requestFocus(),
           onKey: (RawKeyEvent event) {
             if (event is RawKeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.metaLeft || 
+                  event.logicalKey == LogicalKeyboardKey.metaRight) {
+                isWindowsKeyPressed = true;
+              }
               if (!pressedKeys.contains(event.logicalKey)) {
                 pressedKeys.add(event.logicalKey);
-                shortcut = pressedKeys.map((key) => _getKeyLabel(key)).join(' + ');
+                shortcut = _buildShortcutString(pressedKeys, isWindowsKeyPressed);
                 (context as Element).markNeedsBuild();
               }
             } else if (event is RawKeyUpEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.metaLeft || 
+                  event.logicalKey == LogicalKeyboardKey.metaRight) {
+                isWindowsKeyPressed = false;
+              }
               pressedKeys.remove(event.logicalKey);
-              if (pressedKeys.isEmpty || pressedKeys.length == 3) {
+              if (pressedKeys.isEmpty || pressedKeys.length == 3 || 
+                  (isWindowsKeyPressed && pressedKeys.length == 2)) {
                 Navigator.of(context).pop(shortcut);
               }
             }
           },
           child: AlertDialog(
-            title: Text('Press up to 3 keys'),
+            title: Text('Press up to 3 keys (including Win key)'),
             content: Text(shortcut.isEmpty ? 'Waiting for input...' : shortcut),
           ),
         );
@@ -658,11 +731,20 @@ class _MyAppState extends State<MyApp> {
     ) ?? '';
   }
 
+  String _buildShortcutString(Set<LogicalKeyboardKey> keys, bool isWindowsKeyPressed) {
+    List<String> keyLabels = [];
+    if (isWindowsKeyPressed) keyLabels.add('Win');
+    for (var key in keys) {
+      keyLabels.add(_getKeyLabel(key));
+    }
+    return keyLabels.join(' + ');
+  }
+
   String _getKeyLabel(LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.control) return 'Ctrl';
     if (key == LogicalKeyboardKey.alt) return 'Alt';
     if (key == LogicalKeyboardKey.shift) return 'Shift';
-    if (key == LogicalKeyboardKey.meta) return 'Win';
+    if (key == LogicalKeyboardKey.metaLeft || key == LogicalKeyboardKey.metaRight) return 'Win';
     return key.keyLabel;
   }
 
@@ -729,6 +811,19 @@ class _MyAppState extends State<MyApp> {
 
   // Show settings dialog
   void showSettingsDialog() {
+    TextEditingController tempIpController = TextEditingController();
+    TextEditingController tempPortController = TextEditingController();
+    TextEditingController tempPasswordController = TextEditingController(text: obsPassword);
+    
+    // Split the existing obsAddress into IP and port
+    if (obsAddress.isNotEmpty) {
+      final parts = obsAddress.split(':');
+      tempIpController.text = parts[0];
+      if (parts.length > 1) {
+        tempPortController.text = parts[1];
+      }
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -790,28 +885,30 @@ class _MyAppState extends State<MyApp> {
                         children: [
                           const Text('OBS Settings', style: TextStyle(fontWeight: FontWeight.bold)),
                           const Divider(),
-                          TextField(
-                            decoration: const InputDecoration(labelText: 'OBS Address'),
-                            controller: TextEditingController(text: obsAddress),
-                            onChanged: (value) async {
-                              setState(() {
-                                obsAddress = value;
-                              });
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setString('obs_address', value);
-                            },
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 7,
+                                child: TextField(
+                                  decoration: const InputDecoration(labelText: 'OBS IP'),
+                                  controller: tempIpController,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  decoration: const InputDecoration(labelText: 'Port'),
+                                  controller: tempPortController,
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
                           ),
                           TextField(
                             decoration: const InputDecoration(labelText: 'OBS Password'),
-                            controller: TextEditingController(text: obsPassword),
+                            controller: tempPasswordController,
                             obscureText: true,
-                            onChanged: (value) async {
-                              setState(() {
-                                obsPassword = value;
-                              });
-                              final prefs = await SharedPreferences.getInstance();
-                              await prefs.setString('obs_password', value);
-                            },
                           ),
                         ],
                       ),
@@ -875,7 +972,15 @@ class _MyAppState extends State<MyApp> {
                 ),
                 TextButton(
                   child: const Text('Apply'),
-                  onPressed: () {
+                  onPressed: () async {
+                    // Combine IP and port for obsAddress
+                    obsAddress = '${tempIpController.text}:${tempPortController.text}';
+                    obsPassword = tempPasswordController.text;
+
+                    // Update the main controllers
+                    _obsAddressController.text = obsAddress;
+                    _obsPasswordController.text = obsPassword;
+
                     saveSettings();
                     this.setState(() {}); // Update the main UI
                     Navigator.of(context).pop();
@@ -937,7 +1042,7 @@ class _MyAppState extends State<MyApp> {
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('NumberDeck'),
+          title: _buildGlowingTitle(),
           actions: [
             Tooltip(
               message: listenIsOn ? 'Stop Listening' : 'Start Listening',
