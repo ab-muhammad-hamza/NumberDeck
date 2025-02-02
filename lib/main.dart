@@ -11,6 +11,8 @@ import 'package:win32/win32.dart';
 import 'package:keyboard_event/keyboard_event.dart' as kb_event;
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 typedef NativeEnumWindowsProc = Uint32 Function(IntPtr, IntPtr);
 typedef DartEnumWindowsProc = int Function(int, int);
@@ -45,6 +47,11 @@ class _MyAppState extends State<MyApp> {
   Timer? debounceTimer;
   bool isObsConnected = false;
   bool isNumLockOn = false;
+
+  AudioPlayer audioPlayer = AudioPlayer();
+  String? currentAudioPath;
+  bool stopAudioWhenPressedAgain = false;
+  bool isPlaying = false;
 
   // OBS related
   ObsWebSocket? obsWebSocket;
@@ -266,6 +273,39 @@ class _MyAppState extends State<MyApp> {
       print('Error fetching OBS scenes: $e');
     }
   }
+  
+  Future<void> pickAndPlayAudio() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+    );
+
+    if (result != null) {
+      String selectedFilePath = result.files.first.path!;
+
+      // If checkbox is enabled and same audio is playing, stop it
+      if (stopAudioWhenPressedAgain && isPlaying && selectedFilePath == currentAudioPath) {
+        await audioPlayer.stop();
+        setState(() {
+          isPlaying = false;
+        });
+        return;
+      }
+
+      // Play the selected file
+      await audioPlayer.play(DeviceFileSource(selectedFilePath));
+      setState(() {
+        currentAudioPath = selectedFilePath;
+        isPlaying = true;
+      });
+
+      // Listen for when the audio finishes playing
+      audioPlayer.onPlayerComplete.listen((event) {
+        setState(() {
+          isPlaying = false;
+        });
+      });
+    }
+  }
 
   // Load key bindings
   void loadKeyBindings() async {
@@ -292,20 +332,38 @@ class _MyAppState extends State<MyApp> {
   }
 
   // Key event handler
-  void onKeyEvent(kb_event.KeyEvent keyEvent) {
-    if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
-    debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      int vkCode = keyEvent.vkCode;
-      if (keyBindings.containsKey(vkCode)) {
-        final binding = keyBindings[vkCode]!;
-        if (binding['category'] == 'Shortcuts') {
-          print("Executing shortcut for key: $vkCode");
-          executeShortcut(binding['parameter']!);
-        } else {
-          toggleWindow(vkCode);
+  void onKeyEvent(kb_event.KeyEvent keyEvent) async {
+    int vkCode = keyEvent.vkCode;
+
+    if (keyBindings.containsKey(vkCode)) {
+      final binding = keyBindings[vkCode]!;
+
+      if (binding['category'] == 'Audio') {
+        String filePath = binding['parameter']!;
+
+        if (stopAudioWhenPressedAgain && isPlaying) {
+          await audioPlayer.stop();
+          setState(() {
+            isPlaying = false;
+            currentAudioPath = null;
+          });
+          return; // Exit early, so no new audio starts
         }
+
+        await audioPlayer.play(DeviceFileSource(filePath));
+        setState(() {
+          currentAudioPath = filePath;
+          isPlaying = true;
+        });
+
+        audioPlayer.onPlayerComplete.listen((event) {
+          setState(() {
+            isPlaying = false;
+            currentAudioPath = null;
+          });
+        });
       }
-    });
+    }
   }
 
   // Update executeShortcut method
@@ -584,7 +642,7 @@ class _MyAppState extends State<MyApp> {
                     DropdownButton<String>(
                       isExpanded: true,
                       value: selectedCategory,
-                      items: ['OBS', 'Windows', 'Shortcuts'].map((String category) {
+                      items: ['OBS', 'Windows', 'Shortcuts', 'Audio'].map((String category) {
                         return DropdownMenuItem<String>(
                           value: category,
                           child: Text(category),
@@ -613,7 +671,7 @@ class _MyAppState extends State<MyApp> {
                           },
                         ),
                       )
-                    else if (selectedCategory != null)
+                    else if (selectedCategory != null && selectedCategory != 'Audio')
                       DropdownButton<String>(
                         isExpanded: true,
                         value: selectedAction,
@@ -630,6 +688,25 @@ class _MyAppState extends State<MyApp> {
                             toggleMuteAction = false;
                           });
                         },
+                      ),
+                    if (selectedCategory == 'Audio')
+                      ListTile(
+                        title: Text('Pick Audio File'),
+                        trailing: ElevatedButton(
+                          child: Text('Pick'),
+                          onPressed: () async {
+                            FilePickerResult? result = await FilePicker.platform.pickFiles(
+                              type: FileType.audio,
+                            );
+
+                            if (result != null) {
+                              PlatformFile file = result.files.first;
+                              setState(() {
+                                selectedParameter = file.path;
+                              });
+                            }
+                          },
+                        ),
                       ),
                     if (selectedCategory == 'OBS' && selectedAction != null)
                       Column(
@@ -676,6 +753,9 @@ class _MyAppState extends State<MyApp> {
                         finalAction = 'Toggle Source Mute';
                       }
                       saveKeyBinding(keyCode, selectedCategory!, finalAction, selectedParameter ?? '');
+                    }
+                    if (selectedCategory == 'Audio' && selectedParameter != null) {
+                      saveKeyBinding(keyCode, 'Audio', 'Play Audio', selectedParameter!);
                     }
                     Navigator.of(context).pop();
                   },
