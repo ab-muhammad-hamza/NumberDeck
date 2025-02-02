@@ -29,6 +29,7 @@ NumberDeck is an open-source project that replaces the physical Stream Deck with
 ## ✨ Features
 
 - 🎮 **OBS Integration**: Control your streams with ease
+- 🔉 **SoundBoard**: Use NumberDeck as SoundBoard to play SFX
 - 🖥️ **Window Management**: Switch between applications effortlessly
 - ⌨️ **Custom Shortcuts**: Create powerful macros for complex tasks
 - 🌓 **Dark/Light Mode**: Work comfortably in any lighting condition
@@ -52,6 +53,7 @@ NumberDeck is an open-source project that replaces the physical Stream Deck with
 2. Choose an action (OBS control, window management, or custom shortcut)
 3. Click the power button in the app to start listening for keypresses
 4. Use your numpad to execute your configured actions!
+5. With Audio selection option, you can play any audio with NumberDeck
 
 
 ## 🖥️ Usage
@@ -178,6 +180,14 @@ Contributions are what make the open-source community such an amazing place to l
 5. Open a Pull Request
 
 ## ChangeLog
+
+```
+v1.1 (02/02/2025)
+
+- NumberDeck now has the ability play audio 🎉
+
+```
+
 
 ```
 v1.01 (28/09/2024)
