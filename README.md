@@ -62,6 +62,17 @@ Same section again? Yes this section will tell you more!
 
 In the beginning, it was mainly designed for streamers. Now, it can be used by anyone with three major options.
 
+### 🔊 As a SoundBoard:
+
+From NumberDeck v1.1, you can add audio to NumberDeck and use them.
+
+<img src="https://i.imgur.com/RNMhV8I.gif" width="100%" alt="" />
+
+ - Add music
+ - Add video as Audio
+ - Add SFX
+ - Add some pice to your video or stream!!
+
 ### 🎮 For Streamers:
 
 Streamers can use it to bind their NumPad keys to their OBS and can do the following:
